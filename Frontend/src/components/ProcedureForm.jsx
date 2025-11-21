@@ -1,25 +1,42 @@
 import React, { useState } from 'react';
-import { Save, X, Upload, FileText } from 'lucide-react';
-import { documentsAPI } from '../services/api';
+import { Save, X, FileText } from 'lucide-react';
+import { proceduresAPI } from '../services/api';
 
-function DocumentForm({ procedure, onSuccess, onCancel }) {
+function ProcedureForm({ person, onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
-    fecha: new Date().toISOString().split('T')[0],
-    descripcion: ''
+    tipo: '',
+    descripcion: '',
+    fecha_documento: new Date().toISOString().split('T')[0],
+    responsable: '',
+    estado: 'Pendiente'
   });
-  const [selectedFile, setSelectedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const procedureTypes = [
+    'Licencia de Conducir',
+    'Permiso de Construcción',
+    'Certificado de Nacimiento',
+    'Partida de Matrimonio',
+    'Certificado de Estudios',
+    'Permiso Municipal',
+    'Licencia de Funcionamiento',
+    'Otro'
+  ];
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!selectedFile) {
-      newErrors.file = 'Debe seleccionar un archivo';
+    if (!formData.tipo.trim()) {
+      newErrors.tipo = 'El tipo de trámite es requerido';
     }
     
-    if (!formData.fecha) {
-      newErrors.fecha = 'La fecha es requerida';
+    if (!formData.fecha_documento) {
+      newErrors.fecha_documento = 'La fecha del documento es requerida';
+    }
+    
+    if (!formData.responsable.trim()) {
+      newErrors.responsable = 'El responsable es requerido';
     }
 
     setErrors(newErrors);
@@ -35,28 +52,17 @@ function DocumentForm({ procedure, onSuccess, onCancel }) {
 
     setIsLoading(true);
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', selectedFile);
-      uploadFormData.append('procedureId', procedure.id);
-      uploadFormData.append('fecha', formData.fecha);
-      uploadFormData.append('descripcion', formData.descripcion);
-
-      await documentsAPI.upload(uploadFormData);
+      await proceduresAPI.create({
+        ...formData,
+        person_id: person.id
+      });
       
       onSuccess();
     } catch (error) {
-      console.error('Error al subir documento:', error);
-      alert('Error al subir documento: ' + (error.response?.data?.error || error.message));
+      console.error('Error al crear trámite:', error);
+      alert('Error al crear trámite: ' + (error.response?.data?.error || error.message));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setSelectedFile(file);
-    if (errors.file) {
-      setErrors(prev => ({ ...prev, file: '' }));
     }
   };
 
@@ -71,67 +77,37 @@ function DocumentForm({ procedure, onSuccess, onCancel }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center gap-3 mb-6">
-          <Upload className="text-blue-600" size={24} />
-          <h2 className="text-2xl font-bold text-gray-800">Subir Documento</h2>
+          <FileText className="text-blue-600" size={24} />
+          <h2 className="text-2xl font-bold text-gray-800">Nuevo Trámite</h2>
         </div>
 
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-700">
-            <strong>Trámite:</strong> {procedure.tipo}
-          </p>
-          <p className="text-sm text-blue-700">
-            <strong>Persona:</strong> DNI: {procedure.dni}
+            <strong>Persona:</strong> {person.nombre} - DNI: {person.dni}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 gap-6">
-            {/* Archivo */}
+            {/* Tipo de Trámite */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Seleccionar Archivo *
+                Tipo de Trámite *
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition-colors duration-200">
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer flex flex-col items-center"
-                >
-                  <Upload className="text-gray-400 mb-2" size={32} />
-                  <span className="text-sm text-gray-600">
-                    {selectedFile ? selectedFile.name : 'Haz clic para seleccionar un archivo'}
-                  </span>
-                  <span className="text-xs text-gray-500 mt-1">
-                    Formatos permitidos: PDF, Word, imágenes, texto
-                  </span>
-                </label>
-              </div>
-              {errors.file && (
-                <p className="text-red-500 text-sm mt-1">{errors.file}</p>
-              )}
-            </div>
-
-            {/* Fecha */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha del Documento *
-              </label>
-              <input
-                type="date"
-                value={formData.fecha}
-                onChange={(e) => handleChange('fecha', e.target.value)}
+              <select
+                value={formData.tipo}
+                onChange={(e) => handleChange('tipo', e.target.value)}
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
-                  errors.fecha ? 'border-red-500' : 'border-gray-300'
+                  errors.tipo ? 'border-red-500' : 'border-gray-300'
                 }`}
-              />
-              {errors.fecha && (
-                <p className="text-red-500 text-sm mt-1">{errors.fecha}</p>
+              >
+                <option value="">Seleccionar tipo de trámite</option>
+                {procedureTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              {errors.tipo && (
+                <p className="text-red-500 text-sm mt-1">{errors.tipo}</p>
               )}
             </div>
 
@@ -145,8 +121,63 @@ function DocumentForm({ procedure, onSuccess, onCancel }) {
                 onChange={(e) => handleChange('descripcion', e.target.value)}
                 rows={3}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                placeholder="Descripción del documento..."
+                placeholder="Descripción detallada del trámite..."
               />
+            </div>
+
+            {/* Fecha del Documento */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha del Documento *
+              </label>
+              <input
+                type="date"
+                value={formData.fecha_documento}
+                onChange={(e) => handleChange('fecha_documento', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                  errors.fecha_documento ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.fecha_documento && (
+                <p className="text-red-500 text-sm mt-1">{errors.fecha_documento}</p>
+              )}
+            </div>
+
+            {/* Responsable */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Responsable *
+              </label>
+              <input
+                type="text"
+                value={formData.responsable}
+                onChange={(e) => handleChange('responsable', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                  errors.responsable ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Nombre del responsable del trámite"
+              />
+              {errors.responsable && (
+                <p className="text-red-500 text-sm mt-1">{errors.responsable}</p>
+              )}
+            </div>
+
+            {/* Estado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Estado
+              </label>
+              <select
+                value={formData.estado}
+                onChange={(e) => handleChange('estado', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+              >
+                <option value="Pendiente">Pendiente</option>
+                <option value="En revisión">En revisión</option>
+                <option value="Aprobado">Aprobado</option>
+                <option value="Rechazado">Rechazado</option>
+                <option value="Completado">Completado</option>
+              </select>
             </div>
           </div>
 
@@ -162,7 +193,7 @@ function DocumentForm({ procedure, onSuccess, onCancel }) {
               ) : (
                 <Save size={18} />
               )}
-              Subir Documento
+              Crear Trámite
             </button>
             
             <button
@@ -180,4 +211,4 @@ function DocumentForm({ procedure, onSuccess, onCancel }) {
   );
 }
 
-export default DocumentForm;
+export default ProcedureForm;

@@ -1,42 +1,45 @@
-import React, { useState } from 'react';
-import { Save, X, FileText } from 'lucide-react';
-import { proceduresAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { Save, X } from 'lucide-react';
+import { personsAPI } from '../services/api';
 
-function ProcedureForm({ person, onSuccess, onCancel }) {
+function PersonForm({ person, onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
-    tipo: '',
-    descripcion: '',
-    fecha_documento: new Date().toISOString().split('T')[0],
-    responsable: '',
-    estado: 'Pendiente'
+    nombre: '',
+    dni: '',
+    celular: '',
+    direccion: '',
+    correo: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const procedureTypes = [
-    'Licencia de Conducir',
-    'Permiso de Construcción',
-    'Certificado de Nacimiento',
-    'Partida de Matrimonio',
-    'Certificado de Estudios',
-    'Permiso Municipal',
-    'Licencia de Funcionamiento',
-    'Otro'
-  ];
+  useEffect(() => {
+    if (person) {
+      setFormData({
+        nombre: person.nombre || '',
+        dni: person.dni || '',
+        celular: person.celular || '',
+        direccion: person.direccion || '',
+        correo: person.correo || ''
+      });
+    }
+  }, [person]);
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.tipo.trim()) {
-      newErrors.tipo = 'El tipo de trámite es requerido';
+    if (!formData.nombre.trim()) {
+      newErrors.nombre = 'El nombre es requerido';
     }
     
-    if (!formData.fecha_documento) {
-      newErrors.fecha_documento = 'La fecha del documento es requerida';
+    if (!formData.dni.trim()) {
+      newErrors.dni = 'El DNI es requerido';
+    } else if (!/^\d+$/.test(formData.dni)) {
+      newErrors.dni = 'El DNI debe contener solo números';
     }
-    
-    if (!formData.responsable.trim()) {
-      newErrors.responsable = 'El responsable es requerido';
+
+    if (formData.correo && !/\S+@\S+\.\S+/.test(formData.correo)) {
+      newErrors.correo = 'El correo electrónico no es válido';
     }
 
     setErrors(newErrors);
@@ -52,15 +55,16 @@ function ProcedureForm({ person, onSuccess, onCancel }) {
 
     setIsLoading(true);
     try {
-      await proceduresAPI.create({
-        ...formData,
-        person_id: person.id
-      });
+      if (person) {
+        await personsAPI.update(person.id, formData);
+      } else {
+        await personsAPI.create(formData);
+      }
       
       onSuccess();
     } catch (error) {
-      console.error('Error al crear trámite:', error);
-      alert('Error al crear trámite: ' + (error.response?.data?.error || error.message));
+      console.error('Error al guardar persona:', error);
+      alert('Error al guardar persona: ' + (error.response?.data?.error || error.message));
     } finally {
       setIsLoading(false);
     }
@@ -74,110 +78,97 @@ function ProcedureForm({ person, onSuccess, onCancel }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <FileText className="text-blue-600" size={24} />
-          <h2 className="text-2xl font-bold text-gray-800">Nuevo Trámite</h2>
-        </div>
-
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-700">
-            <strong>Persona:</strong> {person.nombre} - DNI: {person.dni}
-          </p>
-        </div>
+    <div className="max-w-2xl mx-auto">
+      <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          {person ? 'Editar Persona' : 'Nueva Persona'}
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 gap-6">
-            {/* Tipo de Trámite */}
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Nombre */}
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Trámite *
-              </label>
-              <select
-                value={formData.tipo}
-                onChange={(e) => handleChange('tipo', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
-                  errors.tipo ? 'border-red-500' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Seleccionar tipo de trámite</option>
-                {procedureTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              {errors.tipo && (
-                <p className="text-red-500 text-sm mt-1">{errors.tipo}</p>
-              )}
-            </div>
-
-            {/* Descripción */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descripción
-              </label>
-              <textarea
-                value={formData.descripcion}
-                onChange={(e) => handleChange('descripcion', e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                placeholder="Descripción detallada del trámite..."
-              />
-            </div>
-
-            {/* Fecha del Documento */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha del Documento *
-              </label>
-              <input
-                type="date"
-                value={formData.fecha_documento}
-                onChange={(e) => handleChange('fecha_documento', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
-                  errors.fecha_documento ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.fecha_documento && (
-                <p className="text-red-500 text-sm mt-1">{errors.fecha_documento}</p>
-              )}
-            </div>
-
-            {/* Responsable */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Responsable *
+                Nombre Completo *
               </label>
               <input
                 type="text"
-                value={formData.responsable}
-                onChange={(e) => handleChange('responsable', e.target.value)}
+                value={formData.nombre}
+                onChange={(e) => handleChange('nombre', e.target.value)}
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
-                  errors.responsable ? 'border-red-500' : 'border-gray-300'
+                  errors.nombre ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="Nombre del responsable del trámite"
+                placeholder="Ingrese el nombre completo"
               />
-              {errors.responsable && (
-                <p className="text-red-500 text-sm mt-1">{errors.responsable}</p>
+              {errors.nombre && (
+                <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>
               )}
             </div>
 
-            {/* Estado */}
+            {/* DNI */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
+                DNI *
               </label>
-              <select
-                value={formData.estado}
-                onChange={(e) => handleChange('estado', e.target.value)}
+              <input
+                type="text"
+                value={formData.dni}
+                onChange={(e) => handleChange('dni', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                  errors.dni ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Ingrese el DNI"
+              />
+              {errors.dni && (
+                <p className="text-red-500 text-sm mt-1">{errors.dni}</p>
+              )}
+            </div>
+
+            {/* Teléfono */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Teléfono
+              </label>
+              <input
+                type="text"
+                value={formData.celular}
+                onChange={(e) => handleChange('celular', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-              >
-                <option value="Pendiente">Pendiente</option>
-                <option value="En revisión">En revisión</option>
-                <option value="Aprobado">Aprobado</option>
-                <option value="Rechazado">Rechazado</option>
-                <option value="Completado">Completado</option>
-              </select>
+                placeholder="Ingrese el teléfono"
+              />
+            </div>
+
+            {/* Correo Electrónico */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Correo Electrónico
+              </label>
+              <input
+                type="email"
+                value={formData.correo}
+                onChange={(e) => handleChange('correo', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                  errors.correo ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Ingrese el correo electrónico"
+              />
+              {errors.correo && (
+                <p className="text-red-500 text-sm mt-1">{errors.correo}</p>
+              )}
+            </div>
+
+            {/* Dirección */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Dirección
+              </label>
+              <textarea
+                value={formData.direccion}
+                onChange={(e) => handleChange('direccion', e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                placeholder="Ingrese la dirección completa"
+              />
             </div>
           </div>
 
@@ -193,7 +184,7 @@ function ProcedureForm({ person, onSuccess, onCancel }) {
               ) : (
                 <Save size={18} />
               )}
-              Crear Trámite
+              {person ? 'Actualizar' : 'Crear'} Persona
             </button>
             
             <button
@@ -211,4 +202,4 @@ function ProcedureForm({ person, onSuccess, onCancel }) {
   );
 }
 
-export default ProcedureForm;
+export default PersonForm;

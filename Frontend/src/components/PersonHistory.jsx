@@ -48,9 +48,7 @@ function PersonHistory({ person, onBack }) {
 
   const handleViewDocument = async (doc) => {
     try {
-      const response = await documentsAPI.download(doc.id);
-      const blob = new Blob([response.data], { type: doc.tipo });
-      const url = URL.createObjectURL(blob);
+      const url = `http://localhost:5000/uploads/${doc.file_path.split('/').pop()}`;
       setViewDocument({ ...doc, url });
     } catch (error) {
       console.error('Error al cargar documento:', error);
@@ -61,15 +59,15 @@ function PersonHistory({ person, onBack }) {
   const handleDownloadDocument = async (doc) => {
     try {
       const response = await documentsAPI.download(doc.id);
-      const blob = new Blob([response.data], { type: doc.tipo });
-      const url = URL.createObjectURL(blob);
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = doc.nombre;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error al descargar documento:', error);
       alert('Error al descargar documento: ' + (error.response?.data?.error || error.message));
@@ -211,7 +209,7 @@ function PersonHistory({ person, onBack }) {
                           <FileText className="text-blue-600" size={24} />
                           <div>
                             <h4 className="font-semibold text-gray-800">{doc.nombre}</h4>
-                            <p className="text-sm text-gray-500">Subido: {doc.fecha}</p>
+                            <p className="text-sm text-gray-500">Subido: {new Date(doc.fecha).toLocaleDateString()}</p>
                           </div>
                         </div>
                         <div className="flex gap-2">

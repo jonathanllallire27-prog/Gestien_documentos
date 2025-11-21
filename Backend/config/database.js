@@ -1,9 +1,8 @@
 import pkg from 'pg';
+const { Pool } = pkg;
 import dotenv from 'dotenv';
 
 dotenv.config();
-
-const { Pool } = pkg;
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -13,13 +12,14 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-// Función para inicializar la base de datos
 export const initDatabase = async () => {
   try {
-    const client = await pool.connect();
-    
+    // Verificar conexión
+    await pool.query('SELECT NOW()');
+    console.log('Conexión a la base de datos establecida.');
+
     // Crear tablas si no existen
-    await client.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS persons (
         id SERIAL PRIMARY KEY,
         nombre VARCHAR(255) NOT NULL,
@@ -53,37 +53,33 @@ export const initDatabase = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS admin (
+      CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        username VARCHAR(100) UNIQUE NOT NULL,
+        username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-
-      -- Insertar admin por defecto si no existe
-      INSERT INTO admin (username, password) 
-      SELECT 'admin', '$2a$10$8K1p/a0dRL1//e12.5Ue9.E7M5.8cZb.8a8b8c8d8e8f' 
-      WHERE NOT EXISTS (SELECT 1 FROM admin WHERE username = 'admin');
-
-      -- Insertar datos de ejemplo
-      INSERT INTO persons (nombre, dni, celular, direccion, correo) 
-      SELECT 'Juan Pérez García', '12345678', '987654321', 'Av. Siempre Viva 123', 'juan@example.com'
-      WHERE NOT EXISTS (SELECT 1 FROM persons WHERE dni = '12345678');
-
-      INSERT INTO persons (nombre, dni, celular, direccion, correo) 
-      SELECT 'María García López', '87654321', '912345678', 'Calle Falsa 123', 'maria@example.com'
-      WHERE NOT EXISTS (SELECT 1 FROM persons WHERE dni = '87654321');
-
-      INSERT INTO persons (nombre, dni, celular, direccion, correo) 
-      SELECT 'Carlos Rodríguez Martínez', '11223344', '955666777', 'Jr. Libertad 456', 'carlos@example.com'
-      WHERE NOT EXISTS (SELECT 1 FROM persons WHERE dni = '11223344');
     `);
 
-    console.log('Base de datos inicializada correctamente');
-    client.release();
+    // Insertar usuario por defecto si no existe
+    const userResult = await pool.query('SELECT * FROM users WHERE username = $1', ['admin']);
+    if (userResult.rows.length === 0) {
+      // Importar bcrypt de forma dinámica
+      const bcrypt = await import('bcryptjs');
+      const hashedPassword = await bcrypt.default.hash('admin123', 10);
+      
+      await pool.query(
+        'INSERT INTO users (username, password, role) VALUES ($1, $2, $3)',
+        ['admin', hashedPassword, 'admin']
+      );
+      console.log('Usuario admin creado (usuario: admin, contraseña: admin123)');
+    }
+
+    console.log('Base de datos inicializada correctamente.');
   } catch (error) {
     console.error('Error al inicializar la base de datos:', error);
-    process.exit(1);
+    throw error;
   }
 };
 

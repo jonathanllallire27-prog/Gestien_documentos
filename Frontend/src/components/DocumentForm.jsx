@@ -80,7 +80,7 @@ function DocumentForm({ procedure, onSuccess, onCancel }) {
             <strong>Trámite:</strong> {procedure.tipo}
           </p>
           <p className="text-sm text-blue-700">
-            <strong>Persona:</strong> DNI: {procedure.dni}
+            <strong>Persona:</strong> {procedure.persona_nombre} - DNI: {procedure.dni}
           </p>
         </div>
 

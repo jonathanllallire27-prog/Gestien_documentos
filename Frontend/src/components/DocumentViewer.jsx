@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Download } from 'lucide-react';
+import { X, Download, FileText } from 'lucide-react';
 
 function DocumentViewer({ document, onClose }) {
   const handleDownload = () => {
