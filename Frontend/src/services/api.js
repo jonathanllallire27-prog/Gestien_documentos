@@ -30,7 +30,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Redirigir al login si está en modo admin
       if (window.location.pathname !== '/') {
         window.location.reload();
       }
@@ -39,47 +38,46 @@ api.interceptors.response.use(
   }
 );
 
+// Función helper para extraer data
+const handleResponse = (response) => response.data;
+
 // Servicios de autenticación
 export const authAPI = {
-  login: (credentials) => api.post('/auth/login', credentials),
-  verify: () => api.get('/auth/verify'),
+  login: (credentials) => api.post('/auth/login', credentials).then(handleResponse),
+  verify: () => api.get('/auth/verify').then(handleResponse),
 };
 
 // Servicios de personas
 export const personsAPI = {
-  getAll: () => api.get('/persons'),
-  search: (query) => api.get(`/persons/search?q=${encodeURIComponent(query)}`),
-  getById: (id) => api.get(`/persons/${id}`),
-  create: (person) => api.post('/persons', person),
-  update: (id, person) => api.put(`/persons/${id}`, person),
-  delete: (id) => api.delete(`/persons/${id}`),
+  getAll: () => api.get('/persons').then(handleResponse),
+  search: (query) => api.get(`/persons/search?q=${encodeURIComponent(query)}`).then(handleResponse),
+  getById: (id) => api.get(`/persons/${id}`).then(handleResponse),
+  create: (person) => api.post('/persons', person).then(handleResponse),
+  update: (id, person) => api.put(`/persons/${id}`, person).then(handleResponse),
+  delete: (id) => api.delete(`/persons/${id}`).then(handleResponse),
 };
 
 // Servicios de trámites
 export const proceduresAPI = {
-  getAll: () => api.get('/procedures'),
-  getByPerson: (personId) => api.get(`/procedures/person/${personId}`),
-  getById: (id) => api.get(`/procedures/${id}`),
-  create: (procedure) => api.post('/procedures', procedure),
-  update: (id, procedure) => api.put(`/procedures/${id}`, procedure),
-  delete: (id) => api.delete(`/procedures/${id}`),
+  getAll: () => api.get('/procedures').then(handleResponse),
+  getByPerson: (personId) => api.get(`/procedures/person/${personId}`).then(handleResponse),
+  getById: (id) => api.get(`/procedures/${id}`).then(handleResponse),
+  create: (procedure) => api.post('/procedures', procedure).then(handleResponse),
+  update: (id, procedure) => api.put(`/procedures/${id}`, procedure).then(handleResponse),
+  delete: (id) => api.delete(`/procedures/${id}`).then(handleResponse),
 };
 
 // Servicios de documentos
 export const documentsAPI = {
-  getByProcedure: (procedureId) => api.get(`/documents/procedure/${procedureId}`),
+  getByProcedure: (procedureId) => api.get(`/documents/procedure/${procedureId}`).then(handleResponse),
   upload: (formData) => api.post('/documents/upload', formData, {
     headers: { 
-      'Content-Type': 'multipart/form-data',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Content-Type': 'multipart/form-data'
     }
-  }),
-  delete: (id) => api.delete(`/documents/${id}`),
+  }).then(handleResponse),
+  delete: (id) => api.delete(`/documents/${id}`).then(handleResponse),
   download: (id) => api.get(`/documents/download/${id}`, { 
-    responseType: 'blob',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    }
+    responseType: 'blob'
   }),
 };
 
