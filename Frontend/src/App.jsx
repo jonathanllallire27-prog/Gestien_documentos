@@ -14,9 +14,10 @@ function App() {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          await authAPI.verify();
+          const response = await authAPI.verify();
           setIsAdmin(true);
         } catch (error) {
+          console.error('Error verifying token:', error);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
@@ -32,12 +33,15 @@ function App() {
     setLoginError('');
     try {
       const response = await authAPI.login(credentials);
-      const { token, user } = response.data;
+      
+      // La respuesta ya es el objeto directo, no necesita .data
+      const { token, user } = response;
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       setIsAdmin(true);
     } catch (error) {
+      console.error('Login error:', error);
       setLoginError(error.response?.data?.error || 'Error al iniciar sesión');
     } finally {
       setIsLoading(false);
@@ -51,7 +55,6 @@ function App() {
     setLoginError('');
   };
 
-  // Pantalla de carga
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
