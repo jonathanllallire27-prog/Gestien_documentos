@@ -11,8 +11,10 @@ import { authenticateToken, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Rutas públicas
+// Ruta pública para búsqueda
 router.get('/search', searchPersons);
+
+// Ruta pública para obtener persona por ID
 router.get('/:id', getPersonById);
 
 // Rutas protegidas (solo admin)

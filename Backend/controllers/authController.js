@@ -1,5 +1,11 @@
 import jwt from 'jsonwebtoken';
-import pool from '../config/database.js';
+import bcrypt from 'bcryptjs';
+
+// Credenciales por defecto (en producción deberían estar en la base de datos)
+const defaultAdmin = {
+  username: 'admin',
+  password: 'admin123' // En producción, esto debería estar hasheado
+};
 
 export const login = async (req, res) => {
   try {
@@ -9,42 +15,29 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
     }
 
-    // Buscar usuario
-    const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1',
-      [username]
-    );
+    // Verificar credenciales (en producción, verificar contra la base de datos)
+    if (username === defaultAdmin.username && password === defaultAdmin.password) {
+      const token = jwt.sign(
+        { 
+          userId: 1, 
+          username: defaultAdmin.username, 
+          role: 'admin' 
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      res.json({
+        token,
+        user: {
+          id: 1,
+          username: defaultAdmin.username,
+          role: 'admin'
+        }
+      });
+    } else {
+      res.status(401).json({ error: 'Credenciales inválidas' });
     }
-
-    const user = result.rows[0];
-
-    // Importar bcrypt de forma dinámica
-    const bcrypt = await import('bcryptjs');
-    
-    // Verificar contraseña
-    const isValidPassword = await bcrypt.default.compare(password, user.password);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    // Generar token
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role
-      }
-    });
   } catch (error) {
     console.error('Error en login:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -52,5 +45,8 @@ export const login = async (req, res) => {
 };
 
 export const verifyToken = (req, res) => {
-  res.json({ user: req.user });
+  res.json({
+    user: req.user,
+    valid: true
+  });
 };

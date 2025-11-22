@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://tu-dominio.com/api' 
+  : 'http://localhost:5000/api';
 
 // Configuración base de axios
 const api = axios.create({
@@ -28,7 +30,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.reload();
+      // Redirigir al login si está en modo admin
+      if (window.location.pathname !== '/') {
+        window.location.reload();
+      }
     }
     return Promise.reject(error);
   }
@@ -64,10 +69,18 @@ export const proceduresAPI = {
 export const documentsAPI = {
   getByProcedure: (procedureId) => api.get(`/documents/procedure/${procedureId}`),
   upload: (formData) => api.post('/documents/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
   }),
   delete: (id) => api.delete(`/documents/${id}`),
-  download: (id) => api.get(`/documents/download/${id}`, { responseType: 'blob' }),
+  download: (id) => api.get(`/documents/download/${id}`, { 
+    responseType: 'blob',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  }),
 };
 
 export default api;
